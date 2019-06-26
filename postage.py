@@ -13,6 +13,7 @@ from Postage.jitter import *
 from pathlib import Path
 from types import ModuleType
 from Postage.csv import CSV,Record
+from sys import exit
 
 if __name__ == '__main__':
 
@@ -20,9 +21,17 @@ if __name__ == '__main__':
     # BUILD INTERFACE
     # ===============
 
-    parser = argparse.ArgumentParser('''Use a module to send one or more emails
-        ''')
+    parser = argparse.ArgumentParser(
+        'Postage: Send them emails',
+        description='''Use a module to send one or more emails. Select one of the following
+        subcommands for additional information.
+        ''',
+    )
     sp = subparsers = parser.add_subparsers()
+
+    # ========================
+    # DEFINE GENERIC ARGUMENTS
+    # ========================
 
     module_argument = Argument('--module','-m',
         choices=modules.handles.keys(),
@@ -73,9 +82,19 @@ if __name__ == '__main__':
         ''')
     single_parser.set_defaults(cmd='single')
 
+    # ====================
+    # LIST MODULES COMMAND
+    # ====================
+
+    list_parser = sp.add_parser('list',
+        description='''List available modules.
+        ''')
+    list_parser.set_defaults(cmd='list')
+
     # ==================
     # SEND FROM CSV FILE
     # ==================
+
     csv_parser = sp.add_parser('csv',
         description='''Send emails from csv. Fields are extracted from the
         header file of the CSV and are used to update content in the email
@@ -146,6 +165,12 @@ if __name__ == '__main__':
     csv_parser.set_defaults(cmd='csv')
 
     args = parser.parse_args()
+
+    if args.cmd == 'list':
+        pp('Printing module list:')
+        print('\n- '+'\n- '.join(modules.handles.keys()))
+        exit()
+
     module = modules.handles[args.module].Module
 
     if args.cmd == 'single':
