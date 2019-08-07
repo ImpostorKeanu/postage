@@ -9,15 +9,16 @@ class Mailer:
     '''
 
     REQUIRED_ATTRIBUTES = ['from_address','to_addresses','subject',
-        'content']
+        'html_content','text_content']
 
-    def __init__(self,from_address,to_addresses,subject,content,
-            *args, **kwargs):
+    def __init__(self,from_address,to_addresses,subject,html_content,
+            text_content,*args, **kwargs):
         '''
         - from - string value - from email
         - to - list of strings - list of email recipients
         - subject - string - email subject
         - content - string - email body
+        - text_content - string - email body (text)
         '''
 
         # =============================
@@ -26,7 +27,8 @@ class Mailer:
 
         self.from_address = from_address 
         self.subject = subject 
-        self.content = content
+        self.html_content = html_content
+        self.text_content = text_content
 
         # ====================================
         # TO SHOULD BE AN ITERABLE IF PROVIDED
@@ -63,7 +65,7 @@ class Mailer:
 
         if missing:
             assert not missing, (
-                f'Mailer object variables are missing: ", ".join(missing)'
+                f'Mailer object variables are missing: {", ".join(missing)}'
             )
         else:
             self.validated_successfully = True

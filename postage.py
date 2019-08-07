@@ -39,6 +39,24 @@ if __name__ == '__main__':
         help='''Module to use.
         '''
     )
+
+
+    body_text_template_argument = Argument('--body-text-template','-btt',
+        required=True,
+        help='''File containing email body. Supports update fields; see 
+        the description of this subcommand for more information on this
+        capability.
+        '''
+    )
+
+    body_html_template_argument =  Argument('--body-html-template','-bht',
+        required=True,
+        help='''File containing the HTML email body. Supports update fields; see 
+        the description of this subcommand for more information on this
+        capability.
+        '''
+    )
+
     module_arguments = Argument('--module-arguments-file','-maf',
         required=False,
         help='''A file containing additional argument that will be
@@ -80,6 +98,9 @@ if __name__ == '__main__':
         required=True,
         help='''String or input file for email body
         ''')
+
+    body_text_template_argument.add(single_parser)
+
     single_parser.set_defaults(cmd='single')
 
     # ====================
@@ -132,13 +153,9 @@ if __name__ == '__main__':
         '''
     )
 
-    eg.add_argument('--body-template','-bt',
-        required=True,
-        help='''File containing email body. Supports update fields; see 
-        the description of this subcommand for more information on this
-        capability.
-        '''
-    )
+    body_html_template_argument.add(eg)
+    
+    body_text_template_argument.add(email_group)
 
     eg.add_argument('--subject-template','-st',
         required=False,
@@ -208,8 +225,12 @@ if __name__ == '__main__':
         # GET THE EMAIL BODY
         # ==================
 
-        body_template = misc.expand_and_join(
-            args.body_template
+        body_html_template = misc.expand_and_join(
+            args.body_html_template
+        )
+
+        body_text_template = misc.expand_and_join(
+            args.body_text_template
         )
 
         # ==================
@@ -242,7 +263,8 @@ if __name__ == '__main__':
             # UPDATE SUBJECT/BODY CONTENT
             # ===========================
 
-            body = record.update_content(body_template)
+            html_body = record.update_content(body_html_template)
+            text_body = record.update_content(body_text_template)
 
             if args.subject_template:
 
@@ -264,7 +286,8 @@ if __name__ == '__main__':
                 from_address=record.from_address,
                 to_addresses=[record.to_address],
                 subject=subject,
-                content=body,
+                html_content=html_body,
+                text_content=text_body,
                 arguments_file=args.module_arguments_file,
             ).send()
 
@@ -280,7 +303,7 @@ if __name__ == '__main__':
                 f'from_address:{record.from_address}\n' \
                 f'to_address:{record.to_address}\n' \
                 f'subject:{subject}\n' \
-                f'content:\n\n{body}\n'
+                f'content:\n\n{text_body}\n'
     
             log.write(log_record)                
 
