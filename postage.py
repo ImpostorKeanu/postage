@@ -22,7 +22,6 @@ if __name__ == '__main__':
     # ===============
 
     parser = argparse.ArgumentParser(
-        'Postage: Send them emails',
         description='''Use a module to send one or more emails. Select one of the following
         subcommands for additional information.
         ''',
