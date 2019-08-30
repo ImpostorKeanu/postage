@@ -13,7 +13,16 @@ from Postage.jitter import *
 from pathlib import Path
 from types import ModuleType
 from Postage.csv import CSV,Record
+from datetime import datetime
 from sys import exit
+
+def add_args(dst_obj,args):
+    '''Add arguments to a parser object. Useful when initializing
+    an argument group.
+    '''
+
+    for arg in args:
+        dst_obj.add_argument(*arg.pargs, **arg.kwargs)
 
 if __name__ == '__main__':
 
@@ -22,303 +31,159 @@ if __name__ == '__main__':
     # ===============
 
     parser = argparse.ArgumentParser(
-        description='''Use a module to send one or more emails. Select one of the following
-        subcommands for additional information.
+        description='''Send emails using one of multiple modules, which are
+        generallye associated with a specific email service, such as SendGrid or
+        Office365. Inputs for these messages are received via CSV file and each
+        field within the CSV file is accessible during templating as each email
+        is constructed and sent.
         ''',
     )
-    sp = subparsers = parser.add_subparsers()
+    sp = subparsers = parser.add_subparsers(help='Module selection.')
+    sp.required=True
+    sp.dest='module'
+
+    for handle,module in modules.handles.items():
+
+        sub = subparsers.add_parser(handle,help=module.help)
+        for arg in module.args:
+
+            if arg.__class__ == ArgumentGroup:
+                group = sub.add_argument_group(*arg.pargs,**arg.kwargs)
+                add_args(group,arg)
+            elif arg.__class__ == MutuallyExclusiveArgumentGroup:
+                group = sub.add_mutually_exclusive_group(
+                        *arg.pargs,**arg.kwargs
+                )
+                add_args(group,arg)
+            else:
+                sub.add_argument(*arg.pargs,**arg.kwargs)
 
     # ========================
     # DEFINE GENERIC ARGUMENTS
     # ========================
 
-    module_argument = Argument('--module','-m',
-        choices=modules.handles.keys(),
-        required=True,
-        help='''Module to use.
-        '''
-    )
-
-
-    body_text_template_argument = Argument('--body-text-template','-btt',
-        required=True,
-        help='''File containing email body. Supports update fields; see 
-        the description of this subcommand for more information on this
-        capability.
-        '''
-    )
-
-    body_html_template_argument =  Argument('--body-html-template','-bht',
-        required=True,
-        help='''File containing the HTML email body. Supports update fields; see 
-        the description of this subcommand for more information on this
-        capability.
-        '''
-    )
-
-    module_arguments = Argument('--module-arguments-file','-maf',
-        required=False,
-        help='''A file containing additional argument that will be
-        passed to the sender module. This is useful in situations
-        where credentials need to be supplied and you would like to
-        avoid writing them to the console window.
-        ''')
-
-    # =====================
-    # SEND INDIVIDUAL EMAIL
-    # =====================
-
-    single_parser = sp.add_parser('single',
-        description='''Send a single email.
-        ''')
-    module_argument.add(single_parser)
-    module_arguments.add(single_parser)
-    single_parser.add_argument('--from-address','-f',
-        required=True,
-        help='''Address from which the email will originate.
-        '''
-    )
-
-    single_parser.add_argument('--to-addresses','-t',
-        required=True,
-        nargs='+',
-        help='''One or more of the following space delimited values: 
-        individual email addresses, file containing email addresses.
-        '''
-    )
-
-    single_parser.add_argument('--subject','-s',
-        required=True,
-        help='''Subject of the email being sent.
-        '''
-    )
-
-    single_parser.add_argument('--content','-c',
-        required=True,
-        help='''String or input file for email body
-        ''')
-
-    body_text_template_argument.add(single_parser)
-
-    single_parser.set_defaults(cmd='single')
-
-    # ====================
-    # LIST MODULES COMMAND
-    # ====================
-
-    list_parser = sp.add_parser('list',
-        description='''List available modules.
-        ''')
-    list_parser.set_defaults(cmd='list')
-
-    # ==================
-    # SEND FROM CSV FILE
-    # ==================
-
-    csv_parser = sp.add_parser('csv',
-        description='''Send emails from csv. Fields are extracted from the
-        header file of the CSV and are used to update content in the email
-        and subject. Fields are designated using the following case-sensitive
-        syntax: <<<:FIELD_NAME:>>>. FIELD_NAME is mapped back to the header
-        of each column in the CSV. If a random value is required, use this
-        tag: <<<:RANDOM:>>>.
-        ''')
-
-    csv_gen = csv_parser.add_argument_group('General Arguments',
-        '''Use the following parameters to configure general
-        capabilities.
-        ''')
-
-    module_argument.add(csv_gen)
-    module_arguments.add(csv_gen)
-
-    csv_gen.add_argument('--csv-file','-cf',
-        required=True,
-        help='''CSV file containing records to send. Must have a column
-        for each update field within the template file. The following
-        columns are required: from_address, to_address.
-        '''
-    )
-
-    csv_gen.add_argument('--log-file','-lf',
-        default='postage.log',
-        help='''Log file to receive full content. Useful when random
-        values are generated.'''
-    )
-
-    email_group = eg = csv_parser.add_argument_group('Email Configuration',
-        '''Configure how each email will be formatted. See the description
-        of this subcommand for information on how formatting works.
-        '''
-    )
-
-    body_html_template_argument.add(eg)
-    
-    body_text_template_argument.add(email_group)
-
-    eg.add_argument('--subject-template','-st',
-        required=False,
-        help='''Template for all subjects. Update fields can be applied here.
-         See the description of this subcommand for more information.
-        '''
-    )
-
-    jitter_group = jg = csv_parser.add_argument_group('Jitter Parameters',
-        '''Configure sleep time between sending emails. Integer values
-        supported only. Suffix a multiplier to the end of an integer to determine
-        a multiplier: s,m,h. Example: 33m indicates a time of thirty-three minutes.
-        ''')
-    jg.add_argument('--jitter-minimum','-jmin',
-        default='1s',
-        help='''Minimium time to sleep between sending emails.
-        '''
-    )
-    jg.add_argument('--jitter-maximum','-jmax',
-        default='1s',
-        help='''Maximum time to sleep between sending emails.
-        '''
-    )
-    csv_parser.set_defaults(cmd='csv')
 
     args = parser.parse_args()
+    module = modules.handles[args.module]
 
-    if args.cmd == 'list':
-        pp('Printing module list:')
-        print('\n- '+'\n- '.join(modules.handles.keys()))
-        exit()
+    # ====================
+    # PREPARE THE LOG FILE
+    # ====================
 
-    module = modules.handles[args.module].Module
+    lp = Path(args.log_file)
 
-    if args.cmd == 'single':
+    if lp.exists(): log = open(lp.__str__(),'a')
+    else: log = open(lp.__str__(),'w')
 
-        args.to_addresses = misc.expand_value(*args.to_addresses)
-        args.content = misc.expand_and_join(args.content,delimiter='\n')
-        sender = module(from_address=args.from_address,
-            to_addresses=args.to_addresses,
-            subject=args.subject,
-            content=args.content,
-            arguments_file=args.module_arguments_file)
-        response, error = sender.send()
+    # ==================
+    # PREPARE THE JITTER
+    # ==================
 
-    elif args.cmd == 'csv':
+    jitter = Jitter(
+        args.jitter_minimum,
+        args.jitter_maximum
+    ) 
 
-        # ====================
-        # PREPARE THE LOG FILE
-        # ====================
+    # ==================
+    # GET THE EMAIL BODY
+    # ==================
 
-        lp = Path(args.log_file)
+    body_html_template = misc.expand_and_join(
+        args.body_html_template
+    )
 
-        if lp.exists(): log = open(lp.__str__(),'a')
-        else: log = open(lp.__str__(),'w')
+    body_text_template = misc.expand_and_join(
+        args.body_text_template
+    )
 
-        # ==================
-        # PREPARE THE JITTER
-        # ==================
+    # ==================
+    # PARSE THE CSV FILE
+    # ==================
 
-        jitter = Jitter(
-            args.jitter_minimum,
-            args.jitter_maximum
-        ) 
+    pp(f'Parsing: {args.csv_file}')
 
-        # ==================
-        # GET THE EMAIL BODY
-        # ==================
+    c = CSV(args.csv_file)
 
-        body_html_template = misc.expand_and_join(
-            args.body_html_template
+    if not 'from_address' in c.headers or not 'to_address' in c.headers:
+
+        raise Exception(
+            'CSV header must have "from_address" and "to_address"'
         )
 
-        body_text_template = misc.expand_and_join(
-            args.body_text_template
+    elif not args.subject_template and not 'subject' in c.headers:
+
+        raise Exception(
+            '''"subject" field must be set in CSV or using the
+            subject_template commandline argument.
+            '''
         )
 
-        # ==================
-        # PARSE THE CSV FILE
-        # ==================
+    pp(f'Sending emails')
 
-        pp(f'Parsing: {args.csv_file}')
+    for record in c.records:
+    
+        # ===========================
+        # UPDATE SUBJECT/BODY CONTENT
+        # ===========================
 
-        c = CSV(args.csv_file)
+        html_body = record.update_content(body_html_template)
+        text_body = record.update_content(body_text_template)
 
-        if not 'from_address' in c.headers or not 'to_address' in c.headers:
+        if args.subject_template:
 
-            raise Exception(
-                'CSV header must have "from_address" and "to_address"'
+            subject = record.update_content(
+                args.subject_template
             )
 
-        elif not args.subject_template and not 'subject' in c.headers:
+        else:
 
-            raise Exception(
-                '''"subject" field must be set in CSV or using the
-                subject_template commandline argument.
-                '''
+            subject = record.update_content(
+                record.subject
             )
 
-        pp(f'Sending emails')
+        # ====================
+        # SEND EMAIL AND SLEEP
+        # ====================
 
-        for record in c.records:
-        
-            # ===========================
-            # UPDATE SUBJECT/BODY CONTENT
-            # ===========================
+        response, error = module(
+            from_address=record.from_address,
+            to_addresses=[record.to_address],
+            subject=subject,
+            html_content=html_body,
+            text_content=text_body,
+            args=args
+        ).send()
 
-            html_body = record.update_content(body_html_template)
-            text_body = record.update_content(body_text_template)
+        # =====================
+        # LOG THE EMAIL TO DISK
+        # =====================
 
-            if args.subject_template:
+        if error: status = 'FAILED'
+        else: status = 'SUCCESS'
 
-                subject = record.update_content(
-                    args.subject_template
+        log_record = '\n\n========[RECORD DELIMITER]========\n\n' \
+            f'time_sent:{datetime.now()}\n' \
+            f'status:{status}\n' \
+            f'from_address:{record.from_address}\n' \
+            f'to_address:{record.to_address}\n' \
+            f'subject:{subject}\n' \
+            f'content:\n\n{text_body}\n'
+
+        log.write(log_record)                
+
+        if not error:
+
+            print(
+                fix(
+                    f'Sent: {record.from_address} > {record.to_address} [{subject}]',
+                    prefix='-')
                 )
-
-            else:
-
-                subject = record.update_content(
-                    record.subject
-                )
-
-            # ====================
-            # SEND EMAIL AND SLEEP
-            # ====================
-
-            response, error = module(
-                from_address=record.from_address,
-                to_addresses=[record.to_address],
-                subject=subject,
-                html_content=html_body,
-                text_content=text_body,
-                arguments_file=args.module_arguments_file,
-            ).send()
-
-            # =====================
-            # LOG THE EMAIL TO DISK
-            # =====================
-
-            if error: status = 'FAILED'
-            else: status = 'SUCCESS'
     
-            log_record = '\n\n========[RECORD DELIMITER]========\n\n' \
-                f'status:{status}\n' \
-                f'from_address:{record.from_address}\n' \
-                f'to_address:{record.to_address}\n' \
-                f'subject:{subject}\n' \
-                f'content:\n\n{text_body}\n'
+        else:
+
+            ep(f'FAILED: {record.from_address} > {record.to_address} ({error})')
+        
+        jitter.sleep()
     
-            log.write(log_record)                
-
-            if not error:
-
-                print(
-                    fix(
-                        f'Sent: {record.from_address} > {record.to_address} [{subject}]',
-                        prefix='-')
-                    )
-        
-            else:
-
-                ep(f'FAILED: {record.from_address} > {record.to_address} ({error})')
-            
-            jitter.sleep()
-        
-        pp('Finished!')
-        ep('Exiting')
+    pp('Finished!')
+    ep('Exiting')

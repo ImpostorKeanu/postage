@@ -1,98 +1,49 @@
 # Postage: a modularized email sender
 
-More documentation coming eventually.
+More documentation coming soon.
 
-# Sending a Single Email
+# Usage
+
+First, select a module. List modules by running the script and passing `--help` as an argument:
 
 ```
-# ./postage single --help
+./postage --help
+```
 
-usage: Postage: Send them emails single [-h] --module {sendgrid_api}
-                                        [--module-arguments-file MODULE_ARGUMENTS_FILE]
-                                        --from-address FROM_ADDRESS
-                                        --to-addresses TO_ADDRESSES
-                                        [TO_ADDRESSES ...] --subject SUBJECT
-                                        --content CONTENT
+Then you can get a comprehensive list of arguments:
 
-Send a single email.
+```
+./postage.py sendgrid_api --help
+usage: postage.py sendgrid_api [-h] --body-text-template BODY_TEXT_TEMPLATE
+                               --body-html-template BODY_HTML_TEMPLATE
+                               --subject-template SUBJECT_TEMPLATE
+                               [--jitter-minimum JITTER_MINIMUM]
+                               [--jitter-maximum JITTER_MAXIMUM]
+                               [--log-file LOG_FILE] --csv-file CSV_FILE
+                               --api-key API_KEY
 
 optional arguments:
   -h, --help            show this help message and exit
-  --module {sendgrid_api}, -m {sendgrid_api}
-                        Module to use.
-  --module-arguments-file MODULE_ARGUMENTS_FILE, -maf MODULE_ARGUMENTS_FILE
-                        A file containing additional argument that will be
-                        passed to the sender module. This is useful in
-                        situations where credentials need to be supplied and
-                        you would like to avoid writing them to the console
-                        window.
-  --from-address FROM_ADDRESS, -f FROM_ADDRESS
-                        Address from which the email will originate.
-  --to-addresses TO_ADDRESSES [TO_ADDRESSES ...], -t TO_ADDRESSES [TO_ADDRESSES ...]
-                        One or more of the following space delimited values:
-                        individual email addresses, file containing email
-                        addresses.
-  --subject SUBJECT, -s SUBJECT
-                        Subject of the email being sent.
-  --content CONTENT, -c CONTENT
-                        String or input file for email body
+  --api-key API_KEY, -ak API_KEY
+                        SendGrid API key
 
-```
+Template Arguments:
+  These arguments define the values that will build the body and subject of
+  outbound emails. Body values in text and HTML formats are provided as file
+  names, where the subject is provided as a single string.
 
-# Sending Emails from a CSV
-
-```
-# ./postage csv --help
-
-usage: Postage: Send them emails csv [-h] --module {sendgrid_api}
-                                     [--module-arguments-file MODULE_ARGUMENTS_FILE]
-                                     --csv-file CSV_FILE [--log-file LOG_FILE]
-                                     --body-template BODY_TEMPLATE
-                                     [--subject-template SUBJECT_TEMPLATE]
-                                     [--jitter-minimum JITTER_MINIMUM]
-                                     [--jitter-maximum JITTER_MAXIMUM]
-
-Send emails from csv. Fields are extracted from the header file of the CSV and
-are used to update content in the email and subject. Fields are designated
-using the following case-sensitive syntax: <<<:FIELD_NAME:>>>. FIELD_NAME is
-mapped back to the header of each column in the CSV. If a random value is
-required, use this tag: <<<:RANDOM:>>>.
-
-optional arguments:
-  -h, --help            show this help message and exit
-
-General Arguments:
-  Use the following parameters to configure general capabilities.
-
-  --module {sendgrid_api}, -m {sendgrid_api}
-                        Module to use.
-  --module-arguments-file MODULE_ARGUMENTS_FILE, -maf MODULE_ARGUMENTS_FILE
-                        A file containing additional argument that will be
-                        passed to the sender module. This is useful in
-                        situations where credentials need to be supplied and
-                        you would like to avoid writing them to the console
-                        window.
-  --csv-file CSV_FILE, -cf CSV_FILE
-                        CSV file containing records to send. Must have a
-                        column for each update field within the template file.
-                        The following columns are required: from_address,
-                        to_address.
-  --log-file LOG_FILE, -lf LOG_FILE
-                        Log file to receive full content. Useful when random
-                        values are generated.
-
-Email Configuration:
-  Configure how each email will be formatted. See the description of this
-  subcommand for information on how formatting works.
-
-  --body-template BODY_TEMPLATE, -bt BODY_TEMPLATE
+  --body-text-template BODY_TEXT_TEMPLATE, -btt BODY_TEXT_TEMPLATE
                         File containing email body. Supports update fields;
                         see the description of this subcommand for more
-                        information on this capability.
+                        information on this capability. Required: True
+  --body-html-template BODY_HTML_TEMPLATE, -bht BODY_HTML_TEMPLATE
+                        File containing the HTML email body. Supports update
+                        fields; see the description of this subcommand for
+                        more information on this capability. Required: True
   --subject-template SUBJECT_TEMPLATE, -st SUBJECT_TEMPLATE
-                        Template for all subjects. Update fields can be
+                        Template string for all subjects. Update fields can be
                         applied here. See the description of this subcommand
-                        for more information.
+                        for more information. Required: True
 
 Jitter Parameters:
   Configure sleep time between sending emails. Integer values supported
@@ -101,7 +52,24 @@ Jitter Parameters:
 
   --jitter-minimum JITTER_MINIMUM, -jmin JITTER_MINIMUM
                         Minimium time to sleep between sending emails.
+                        Default: 1s
   --jitter-maximum JITTER_MAXIMUM, -jmax JITTER_MAXIMUM
-                        Maximum time to sleep between sending emails.
+                        Maximum time to sleep between sending emails. Default:
+                        1s
 
+I/O Parameters:
+  Set input/output configurations for the CSV and log files
+
+  --log-file LOG_FILE, -lf LOG_FILE
+                        Log file to receive full content. Useful when random
+                        values are generated. Default: postage.log
+  --csv-file CSV_FILE, -cf CSV_FILE
+                        File containing CSV records. Fields are extracted from
+                        the header file of the CSV and are used to update
+                        content in the email and subject. Fields are
+                        designated using the following case-sensitive syntax:
+                        <<<:FIELD_NAME:>>>. FIELD_NAME is mapped back to the
+                        header of each column in the CSV. If a random value is
+                        required, use this tag: <<<:RANDOM:>>>. REQUIRED
+                        FIELDS: to_address, from_address. Required: True
 ```

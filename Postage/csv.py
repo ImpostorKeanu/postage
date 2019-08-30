@@ -15,6 +15,8 @@ def gen_rand(known):
             return r
 
 class Record:
+
+    KNOWN = []
     
     def __init__(self,headers,values):
 
@@ -36,13 +38,13 @@ class Record:
 
             # =======================================
             # HANDLE WHEN RANDOM CONTENT IS REQUESTED
-            # =======================================
+            # ======================================
 
             if re.search(rand_re,content):
-
+                Record.KNOWN.append(gen_rand(Record.KNOWN))
                 content = re.sub(
                     rand_re,
-                    gen_rand(known),
+                    Record.KNOWN[-1],
                     content
                 )
 

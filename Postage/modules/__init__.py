@@ -40,4 +40,4 @@ for f in files:
     spec = spec_from_file_location(mname, base+f)
     mod = module_from_spec(spec)
     spec.loader.exec_module(mod)
-    handles[mname] = mod
+    handles[mname] = mod.Module

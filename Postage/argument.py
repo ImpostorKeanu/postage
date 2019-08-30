@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+import pdb
 class Argument:
     '''Generic argument object which will pass args and kwargs to
     argparse.parser.add_argument.
@@ -18,9 +18,10 @@ class ArgumentGroup(Argument,list):
     '''A list of arguments that will be added to an argument group.
     '''
 
-    def __init__(self, arguments=[], *args, **kwargs):
+    def __init__(self, arguments=None, *args, **kwargs):
         '''`arguments` is a list of Argument objects
         '''
+        arguments = arguments or []
         Argument.__init__(self,*args,**kwargs)
         
         # Validate and append arguments

@@ -11,6 +11,79 @@ class Mailer:
     REQUIRED_ATTRIBUTES = ['from_address','to_addresses','subject',
         'html_content','text_content']
 
+
+    tg = template_group = ArgumentGroup(
+        title='Template Arguments',
+        description='These arguments define the values that will build '\
+        'the body and subject of outbound emails. Body values '\
+        'in text and HTML formats are provided as file names, '\
+        'where the subject is provided as a single string.')
+
+    tg.append(Argument('--body-text-template','-btt',
+        required=True,
+        help='''File containing email body. Supports update fields; see 
+        the description of this subcommand for more information on this
+        capability. Required: %(required)s
+        '''
+    ))
+
+    tg.append(Argument('--body-html-template','-bht',
+        required=True,
+        help='''File containing the HTML email body. Supports update fields; see 
+        the description of this subcommand for more information on this
+        capability. Required: %(required)s
+        '''
+    ))
+    
+    tg.append(Argument('--subject-template','-st',
+        required=True,
+        help='''Template string for all subjects. Update fields can be applied here.
+         See the description of this subcommand for more information. Required: %(required)s
+        '''
+    ))
+
+
+    jitter_group = jg = ArgumentGroup(title='Jitter Parameters',
+        description='''Configure sleep time between sending emails. Integer values
+        supported only. Suffix a multiplier to the end of an integer to determine
+        a multiplier: s,m,h. Example: 33m indicates a time of thirty-three minutes.
+        ''')
+
+    jg.append(Argument('--jitter-minimum','-jmin',
+        default='1s',
+        help='''Minimium time to sleep between sending emails. Default: %(default)s
+        '''
+    ))
+    jg.append(Argument('--jitter-maximum','-jmax',
+        default='1s',
+        help='''Maximum time to sleep between sending emails. Default: %(default)s
+        '''
+    ))
+
+    iog = io_group = ArgumentGroup(title='I/O Parameters',
+        description='Set input/output configurations for the CSV and log files')
+    iog.append(Argument('--log-file','-lf',
+        default='postage.log',
+        help='''Log file to receive full content. Useful when random
+        values are generated. Default: %(default)s''')
+    ),
+    iog.append(Argument('--csv-file','-cf',
+        required=True,
+        help='''File containing CSV records. Fields are extracted from the
+        header file of the CSV and are used to update content in the email
+        and subject. Fields are designated using the following case-sensitive
+        syntax: <<<:FIELD_NAME:>>>. FIELD_NAME is mapped back to the header
+        of each column in the CSV. If a random value is required, use this
+        tag: <<<:RANDOM:>>>. REQUIRED FIELDS: to_address, from_address.
+        Required: %(required)s''')
+    )
+
+    DEFAULT_ARGUMENTS = [
+        tg,
+        jg,
+        iog
+    ]
+
     def __init__(self,from_address,to_addresses,subject,html_content,
             text_content,*args, **kwargs):
         '''

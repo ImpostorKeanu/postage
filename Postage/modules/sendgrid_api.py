@@ -3,16 +3,25 @@
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 from Postage.mailer import Mailer
+from Postage.argument import *
 import json
 
 class Module(Mailer):
 
-    def __init__(self,arguments_file,*args,**kwargs):
+    help='Send emails using the sendgrid api'
+
+    args=Mailer.DEFAULT_ARGUMENTS+[
+            Argument('--api-key','-ak',
+                required=True,
+                help='SendGrid API key'
+            )
+    ]
+
+    def __init__(self,args,*aargs,**kwargs):
         '''Initialize the module.
         '''
-
-        self.parse_module_arguments(arguments_file)
-        super().__init__(*args,**kwargs)
+        args = self.api_key = args.api_key
+        super().__init__(*aargs,**kwargs)
 
     @staticmethod
     def build_message(from_address, to_addresses, subject, html_content,
@@ -51,17 +60,3 @@ class Module(Mailer):
             e = ex
 
         return response,e
-
-    def parse_module_arguments(self,infile):
-        '''Extract an API key from the supplied input file.
-        '''
-
-        try:
-
-            with open(infile) as infile:
-                self.api_key = json.loads(infile.read())['API_KEY']          
-
-        except Exception as e:
-
-            print('Failed to load arguments file for the sendgrid module')
-            raise e
