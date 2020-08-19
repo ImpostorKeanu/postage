@@ -23,10 +23,15 @@ class Module(Mailer):
     # ============================================================
 
     description=f'''Send emails using Office 365 via Azure application. Requires
-    a username and password. The following attributes are required for
+    the user to register an Azure application. The following attributes are required for
     each CSV record in order for this module to function: 
 
     {", ".join(MESSAGE_ATTRIBUTES)}
+
+    See this Wiki page for information on how to register an application and how
+    to complete authentication:
+
+    https://github.com/arch4ngel/postage/wiki/Office365-Module
     '''
 
     # =======================
