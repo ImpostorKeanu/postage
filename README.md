@@ -62,6 +62,7 @@ This command would compile the CSV file required for Postage:
 python3.8 parsuite.py templatizer --csv-file inputs.csv \
     -tts "<<<:RAND1:>>>" "<<<:first_name:>>>" \
     "<<<:last_name:>>>" "<<<:email:>>>" \
+    "Evil Bill" "sender@evil.com" \
     "$subject_template" "$html_template"
 ```
 And the output would be:
@@ -70,6 +71,28 @@ And the output would be:
 b3a2652sK9,Bob,Green,bgreen@yahoo.com,"Bob, you should unquestionably click this link!","<p>Hello Bob, click this link! https://www.evil.com?uid=b3a2652sK9</p>"
 y0gdPUvr9h,Alice,Orange,aorange@yahoo.com,"Alice, you should unquestionably click this link!","<p>Hello Alice, click this link! https://www.evil.com?uid=y0gdPUvr9h</p>"
 ```
+
+Now we add a header to the file to make sure it can be used with
+the desired module. Let's say we're using the O365 module, which
+requires the following components: sender_name, sender_address,
+recipient_name, recipient_address, subject, html_body
+
+```
+id,recipient_name,recipient_last_name,recipient_address,subject,html_body,sender_name,sender_address
+b3a2652sK9,Bob,Green,bgreen@yahoo.com,Evil Bill,"Bob, you should unquestionably click this link!","<p>Hello Bob, click this link! https://www.evil.com?uid=b3a2652sK9</p>"
+y0gdPUvr9h,Alice,Orange,aorange@yahoo.com,"Alice, you should unquestionably click this link!","<p>Hello Alice, click this link! https://www.evil.com?uid=y0gdPUvr9h</p>"
+```
+
+Now the `sender_name` and `sender_address` fields need to be added
+to the records. Assuming the same are being used for each target,
+then sed could be used. Assuming output from the previous command
+was dumped to `output.csv`:
+
+```
+sed -i -r -e 's/.$/,"Evil Bob",bob@evil.com/' output.csv
+```
+
+Now the CSV fils is Postage ready!
 
 # Supported Services
 
