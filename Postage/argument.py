@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import pdb
+
 class Argument:
     '''Generic argument object which will pass args and kwargs to
     argparse.parser.add_argument.

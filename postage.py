@@ -9,12 +9,14 @@ from Postage import modules
 from Postage.string_fix import *
 from Postage import validators
 from Postage import misc
+from Postage.exceptions import MalformedMessageRecordException
 from Postage.jitter import *
 from pathlib import Path
 from types import ModuleType
 from Postage.csv import CSV,Record
 from datetime import datetime
 from sys import exit
+import pdb
 
 def add_args(dst_obj,args):
     '''Add arguments to a parser object. Useful when initializing
@@ -44,7 +46,10 @@ if __name__ == '__main__':
 
     for handle,module in modules.handles.items():
 
-        sub = subparsers.add_parser(handle,help=module.help)
+        sub = subparsers.add_parser(
+                handle,
+                description=module.description,
+            )
         for arg in module.args:
 
             if arg.__class__ == ArgumentGroup:
@@ -62,9 +67,12 @@ if __name__ == '__main__':
     # DEFINE GENERIC ARGUMENTS
     # ========================
 
-
     args = parser.parse_args()
-    module = modules.handles[args.module]
+    module = modules.handles[args.module](args)
+
+    # Perform any additional module initializations
+    if 'module_init' in module.__dict__:
+        module.module_init(args)
 
     # ====================
     # PREPARE THE LOG FILE
@@ -85,18 +93,6 @@ if __name__ == '__main__':
     ) 
 
     # ==================
-    # GET THE EMAIL BODY
-    # ==================
-
-    body_html_template = misc.expand_and_join(
-        args.body_html_template
-    )
-
-    body_text_template = misc.expand_and_join(
-        args.body_text_template
-    )
-
-    # ==================
     # PARSE THE CSV FILE
     # ==================
 
@@ -104,84 +100,45 @@ if __name__ == '__main__':
 
     c = CSV(args.csv_file)
 
-    if not 'from_address' in c.headers or not 'to_address' in c.headers:
-
-        raise Exception(
-            'CSV header must have "from_address" and "to_address"'
-        )
-
-    elif not args.subject_template and not 'subject' in c.headers:
-
-        raise Exception(
-            '''"subject" field must be set in CSV or using the
-            subject_template commandline argument.
-            '''
-        )
-
     pp(f'Sending emails')
 
     for record in c.records:
-    
-        # ===========================
-        # UPDATE SUBJECT/BODY CONTENT
-        # ===========================
-
-        html_body = record.update_content(body_html_template)
-        text_body = record.update_content(body_text_template)
-
-        if args.subject_template:
-
-            subject = record.update_content(
-                args.subject_template
-            )
-
-        else:
-
-            subject = record.update_content(
-                record.subject
-            )
 
         # ====================
         # SEND EMAIL AND SLEEP
         # ====================
 
-        response, error = module(
-            from_address=record.from_address,
-            to_addresses=[record.to_address],
-            subject=subject,
-            html_content=html_body,
-            text_content=text_body,
-            args=args
-        ).send()
+        status = 'SUCCESS'
+        try:
+            message_attributes = ma = \
+                    module.send(record=record)
+        except MalformedMessageRecordException as e:
+            status = 'FAILED'
+            print(f"Invalid CSV record: {e}")
+            continue
+        except Exception as e:
+            pp("Unhandled exception occurred:\n\n\n")
+            raise e
 
         # =====================
         # LOG THE EMAIL TO DISK
         # =====================
 
-        if error: status = 'FAILED'
-        else: status = 'SUCCESS'
-
-        log_record = '\n\n========[RECORD DELIMITER]========\n\n' \
+        log.write('\n\n========[ RECORD DELIMITER ]========\n\n' \
             f'time_sent:{datetime.now()}\n' \
             f'status:{status}\n' \
-            f'from_address:{record.from_address}\n' \
-            f'to_address:{record.to_address}\n' \
-            f'subject:{subject}\n' \
-            f'content:\n\n{text_body}\n'
+            f'from_address:{ma["sender_address"]}\n' \
+            f'to_address:{ma["recipient_address"]}\n' \
+            f'subject:{ma["subject"]}\n' \
+            f'content:\n\n{ma["body"]}\n')
 
-        log.write(log_record)                
-
-        if not error:
-
-            print(
-                fix(
-                    f'Sent: {record.from_address} > {record.to_address} [{subject}]',
-                    prefix='-')
-                )
-    
-        else:
-
-            ep(f'FAILED: {record.from_address} > {record.to_address} ({error})')
+        print(
+            fix(
+                f'Sent: {ma["sender_address"]} > ' \
+                f'{ma["recipient_address"]} [{ma["subject"]}]',
+                prefix='-'
+            )
+        )
         
         jitter.sleep()
     

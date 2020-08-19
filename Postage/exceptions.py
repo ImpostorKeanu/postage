@@ -1,0 +1,2 @@
+class MalformedMessageRecordException(Exception):
+    pass
